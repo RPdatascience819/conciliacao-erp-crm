@@ -33,7 +33,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "tools"]
 
 [[tool.mypy.overrides]]
 module = ["pandas", "pandas.*"]
