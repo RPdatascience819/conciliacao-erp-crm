@@ -1,0 +1,4 @@
+* text=auto eol=lf
+# Fixtures são comparadas byte a byte e têm o SHA-256 gravado no summary.md esperado:
+# nenhuma conversão de fim de linha, em nenhum sistema.
+tests/fixtures/** -text
