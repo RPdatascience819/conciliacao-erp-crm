@@ -1,0 +1,5 @@
+order_id,amount,erp_customer,erp_order_date,crm_customer,crm_order_date
+007,12.00,00123,07/03/2024,00123,2024-03-07
+PED-001,100.00,Ana Souza,2024-03-01,Ana Souza,2024-03-01
+PED-002,250.50,Bruno Lima,2024-03-02,Bruno Lima,2024-03-02
+PED-004,-20.00,Diego Rocha,2024-03-03,Diego Rocha,2024-03-03

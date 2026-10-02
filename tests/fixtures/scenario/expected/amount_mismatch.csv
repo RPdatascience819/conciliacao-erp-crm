@@ -1,0 +1,2 @@
+order_id,erp_amount,crm_amount,difference,erp_customer,crm_customer,erp_line,crm_line
+PED-003,80.00,80.01,0.01,"Silva, Carla",Carla Silva,4,4
