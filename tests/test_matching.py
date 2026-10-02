@@ -93,3 +93,12 @@ def test_bom_and_crlf_are_accepted(run: Run) -> None:
     crlf = HEADER.replace("\n", "\r\n") + "A,1,c,d\r\n"
     result = run("\N{BYTE ORDER MARK}" + crlf, HEADER + "A,1,c,d\n")
     assert [p.erp.order_id for p in result.matched] == ["A"]
+
+
+def test_cr_only_line_endings_are_accepted(run: Run) -> None:
+    # "CSV (Macintosh)" do Excel termina as linhas só com "\r".
+    cr = (HEADER + "A,1,c,d\nB,2,c,d\n").replace("\n", "\r")
+    result = run(cr, HEADER + "A,1,c,d\n")
+    assert [p.erp.order_id for p in result.matched] == ["A"]
+    assert [o.order_id for o in result.missing_in_crm] == ["B"]
+    assert result.erp_rows_read == 2

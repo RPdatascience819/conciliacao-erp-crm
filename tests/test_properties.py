@@ -18,7 +18,7 @@ HEADER = ["order_id", "amount", "customer", "order_date"]
 # Alfabeto pequeno para forçar colisões de ID e casamentos entre os lados.
 ids = st.sampled_from(["A", "B", "C", "a", " A", "A ", "", "  ", "007"])
 amounts = st.sampled_from(["1", "1.0", "1.00", "2", "-1", "0", "1.005", "abc", "", "1e3", "NaN"])
-texts = st.sampled_from(["c", "", "00123", "Silva, Ana", 'dito "x"', "duas\nlinhas"])
+texts = st.sampled_from(["c", "", "00123", "Silva, Ana", 'dito "x"', "duas\nlinhas", "cr\rsolto"])
 
 good_rows = st.tuples(ids, amounts, texts, texts).map(list)
 # Linhas com campos de menos, de mais, ou vazias (lista vazia vira linha em branco).
@@ -27,11 +27,13 @@ ragged_rows = st.sampled_from([0, 1, 2, 3, 5, 6]).flatmap(
 )
 rows = st.one_of(good_rows, good_rows, good_rows, ragged_rows)
 files = st.lists(rows, max_size=12)
+# Terminadores que extratos reais usam: Unix, Windows e "CSV (Macintosh)" do Excel.
+line_endings = st.sampled_from(["\n", "\r\n", "\r"])
 
 
-def to_csv(records: list[list[str]]) -> str:
+def to_csv(records: list[list[str]], line_ending: str = "\n") -> str:
     buffer = io.StringIO()
-    writer = csv.writer(buffer, lineterminator="\n")
+    writer = csv.writer(buffer, lineterminator=line_ending)
     writer.writerow(HEADER)
     writer.writerows(records)
     return buffer.getvalue()
@@ -51,11 +53,13 @@ def reconcile_both(erp: str, crm: str) -> tuple[ReconciliationResult, Reconcilia
 # deadline=None: o motor pandas passa com folga dos 200 ms padrão por exemplo em
 # máquinas lentas de CI, e um tempo variável não pode reprovar um teste de lógica.
 @settings(deadline=None, max_examples=200)
-@given(erp=files, crm=files)
+@given(erp=files, crm=files, line_ending=line_endings)
 def test_engines_agree_and_every_row_lands_exactly_once(
-    erp: list[list[str]], crm: list[list[str]]
+    erp: list[list[str]], crm: list[list[str]], line_ending: str
 ) -> None:
-    stdlib_result, pandas_result = reconcile_both(to_csv(erp), to_csv(crm))
+    stdlib_result, pandas_result = reconcile_both(
+        to_csv(erp, line_ending), to_csv(crm, line_ending)
+    )
 
     # 1. Diferencial: os dois motores devolvem exatamente o mesmo resultado.
     assert stdlib_result == pandas_result

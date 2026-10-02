@@ -74,7 +74,7 @@ def _read_frame(path: Path) -> pd.DataFrame:
     text = read_text(path)
     try:
         try:
-            header = pd.read_csv(io.StringIO(text), nrows=1, **_READ_OPTIONS)
+            header = pd.read_csv(io.StringIO(text, newline=""), nrows=1, **_READ_OPTIONS)
             width = header.shape[1]
         except pd.errors.EmptyDataError:  # primeiro registro é uma linha vazia
             width = 0
@@ -87,10 +87,12 @@ def _read_frame(path: Path) -> pd.DataFrame:
             return None
 
         frame = pd.read_csv(
-            io.StringIO(text), names=range(width), on_bad_lines=measure, **_READ_OPTIONS
+            io.StringIO(text, newline=""), names=range(width), on_bad_lines=measure, **_READ_OPTIONS
         )
         if too_wide:
-            frame = pd.read_csv(io.StringIO(text), names=range(max(too_wide)), **_READ_OPTIONS)
+            frame = pd.read_csv(
+                io.StringIO(text, newline=""), names=range(max(too_wide)), **_READ_OPTIONS
+            )
     except (pd.errors.ParserError, csv.Error) as exc:
         raise InputError(f"{path}: CSV inválido ({exc})") from None
     return frame

@@ -111,3 +111,8 @@ def test_rejected_sorted_erp_first_then_by_line(run: Run) -> None:
         ("crm", 2),
         ("crm", 3),
     ]
+
+
+def test_bare_cr_inside_unquoted_field_ends_the_row(run: Run) -> None:
+    # Fora de aspas, "\r" sozinho termina a linha: o registro vira duas linhas malformadas.
+    assert reasons(run, "A,1,c\rx,d\n") == [(2, "malformed_row"), (3, "malformed_row")]
