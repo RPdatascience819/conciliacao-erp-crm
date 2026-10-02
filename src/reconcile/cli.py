@@ -29,7 +29,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         write_outputs(result, erp_input, crm_input, args.out)
     except OSError as exc:
-        print(f"erro: não foi possível gravar em {args.out}: {exc.strerror}", file=sys.stderr)
+        where = exc.filename or args.out
+        print(
+            f"erro: não foi possível gravar {where} ({exc.strerror or exc}); "
+            "nenhuma saída foi alterada",
+            file=sys.stderr,
+        )
         return EXIT_ERROR
     _report(args.engine, result, args.out)
     divergent = (

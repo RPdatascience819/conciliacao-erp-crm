@@ -7,6 +7,7 @@ UTF-8, terminador de linha "\\n" fixo e nenhuma data, hora ou nome de motor.
 from __future__ import annotations
 
 import csv
+import errno
 import json
 import os
 import shutil
@@ -114,10 +115,40 @@ def write_outputs(
         )
         with (staging / "summary.md").open("w", encoding="utf-8", newline="") as file:
             file.write(render_summary(result, erp_input, crm_input))
-        for name in OUTPUT_FILES:
-            os.replace(staging / name, out_dir / name)
+        _replace_all(staging, out_dir)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
+
+
+def _replace_all(staging: Path, out_dir: Path) -> None:
+    """Troca as 6 saídas de uma vez: ou todas são novas, ou todas continuam as antigas.
+
+    No Windows, um arquivo aberto em outro programa (o Excel) não sai do lugar. Por isso
+    as saídas antigas vão primeiro para um backup; se alguma não for, as que foram voltam
+    e a pasta fica exatamente como estava.
+    """
+    for name in OUTPUT_FILES:
+        if (out_dir / name).is_dir():
+            # Nunca mover uma pasta do usuário: ela iria para o staging e seria apagada.
+            raise IsADirectoryError(errno.EISDIR, "é uma pasta", str(out_dir / name))
+    backup = staging / "anterior"
+    backup.mkdir()
+    moved: list[str] = []
+    placed: list[str] = []
+    try:
+        for name in OUTPUT_FILES:
+            if (out_dir / name).exists():
+                os.replace(out_dir / name, backup / name)
+                moved.append(name)
+        for name in OUTPUT_FILES:
+            os.replace(staging / name, out_dir / name)
+            placed.append(name)
+    except OSError:
+        for name in placed:
+            (out_dir / name).unlink(missing_ok=True)
+        for name in moved:
+            os.replace(backup / name, out_dir / name)
+        raise
 
 
 def _write_csv(path: Path, header: Sequence[str], rows: Iterable[Sequence[str]]) -> None:

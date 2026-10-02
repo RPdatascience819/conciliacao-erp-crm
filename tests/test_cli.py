@@ -93,3 +93,22 @@ def test_default_out_dir_is_output(
     monkeypatch.chdir(tmp_path)
     assert main(["--erp", str(erp), "--crm", str(crm)]) == 0
     assert (tmp_path / "output" / "matched.csv").exists()
+
+
+def test_write_error_names_the_file_and_says_nothing_changed(
+    write_csv: WriteCsv,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def replace(src: object, dst: object) -> None:
+        raise PermissionError(13, "Acesso negado", str(tmp_path / "out" / "matched.csv"))
+
+    monkeypatch.setattr("reconcile.writer.os.replace", replace)
+    erp = write_csv("erp.csv", HEADER)
+    crm = write_csv("crm.csv", HEADER)
+    assert main(args(erp, crm, tmp_path / "out")) == 2
+    err = capsys.readouterr().err
+    assert len(err.strip().splitlines()) == 1 and "Traceback" not in err
+    assert "matched.csv" in err and "Acesso negado" in err
+    assert "nenhuma saída foi alterada" in err

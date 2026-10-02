@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import sys
 from decimal import Decimal
 from pathlib import Path
 
@@ -120,3 +122,50 @@ def test_fingerprint_uses_name_and_sha256(tmp_path: Path) -> None:
         name="pedidos.csv",
         sha256="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
     )
+
+
+EMPTY = ReconciliationResult((), (), (), (), (), 0, 0)
+
+
+def snapshot(folder: Path) -> dict[str, str]:
+    return {p.name: read(p) for p in folder.iterdir()}
+
+
+def test_failed_replace_keeps_previous_run_intact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_outputs(RESULT, ERP_IN, CRM_IN, tmp_path)
+    before = snapshot(tmp_path)
+    blocked = tmp_path / "rejected.csv"
+    real_replace = os.replace
+
+    def replace(src: str | os.PathLike[str], dst: str | os.PathLike[str]) -> None:
+        # Simula o Windows com rejected.csv aberto no Excel: o arquivo não sai do lugar.
+        if blocked in (Path(src), Path(dst)):
+            raise PermissionError(13, "Acesso negado", str(blocked))
+        real_replace(src, dst)
+
+    monkeypatch.setattr("reconcile.writer.os.replace", replace)
+    with pytest.raises(PermissionError) as exc:
+        write_outputs(EMPTY, ERP_IN, CRM_IN, tmp_path)
+    assert exc.value.filename == str(blocked)
+    assert snapshot(tmp_path) == before  # nada novo ao lado de nada velho, e sem staging
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="só o Windows trava arquivo aberto")
+def test_file_open_in_another_program_keeps_previous_run_intact(tmp_path: Path) -> None:
+    write_outputs(RESULT, ERP_IN, CRM_IN, tmp_path)
+    before = snapshot(tmp_path)
+    with (tmp_path / "rejected.csv").open("rb"), pytest.raises(PermissionError):
+        write_outputs(EMPTY, ERP_IN, CRM_IN, tmp_path)
+    assert snapshot(tmp_path) == before
+
+
+def test_directory_named_like_an_output_is_never_moved(tmp_path: Path) -> None:
+    folder = tmp_path / "summary.md"
+    folder.mkdir()
+    (folder / "nota.txt").write_text("do usuário", encoding="utf-8")
+    with pytest.raises(IsADirectoryError):
+        write_outputs(RESULT, ERP_IN, CRM_IN, tmp_path)
+    assert read(folder / "nota.txt") == "do usuário"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["summary.md"]
