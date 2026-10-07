@@ -16,10 +16,11 @@ import io
 import shutil
 import urllib.request
 import zipfile
-from collections import defaultdict
 from collections.abc import Iterator
 from decimal import Decimal
 from pathlib import Path
+
+from reconcile.contract import is_valid_amount
 
 DATASET_URL = "https://www.kaggle.com/api/v1/datasets/download/olistbr/brazilian-ecommerce"
 HEADER = ["order_id", "amount", "customer", "order_date"]
@@ -32,12 +33,13 @@ def build_extracts(archive_path: Path, out_dir: Path) -> tuple[Path, Path]:
             row["order_id"]: (row["customer_id"], row["order_purchase_timestamp"][:10])
             for row in _rows(archive, "olist_orders_dataset.csv")
         }
-        erp: defaultdict[str, Decimal] = defaultdict(Decimal)
+        erp: dict[str, Decimal | str] = {}
         for row in _rows(archive, "olist_order_payments_dataset.csv"):
-            erp[row["order_id"]] += Decimal(row["payment_value"])
-        crm: defaultdict[str, Decimal] = defaultdict(Decimal)
+            _add(erp, row["order_id"], row["payment_value"])
+        crm: dict[str, Decimal | str] = {}
         for row in _rows(archive, "olist_order_items_dataset.csv"):
-            crm[row["order_id"]] += Decimal(row["price"]) + Decimal(row["freight_value"])
+            _add(crm, row["order_id"], row["price"])
+            _add(crm, row["order_id"], row["freight_value"])
     out_dir.mkdir(parents=True, exist_ok=True)
     erp_path, crm_path = out_dir / "erp_orders.csv", out_dir / "crm_orders.csv"
     _write(erp_path, erp, orders)
@@ -50,9 +52,20 @@ def _rows(archive: zipfile.ZipFile, name: str) -> Iterator[dict[str, str]]:
         yield from csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8", newline=""))
 
 
-def _write(path: Path, totals: dict[str, Decimal], orders: dict[str, tuple[str, str]]) -> None:
-    # str(Decimal) e não f"{:.2f}": a soma sai como veio, sem arredondar. Um valor fora do
-    # formato numa versão futura do Olist vai para rejected.csv em vez de ser corrigido aqui.
+def _add(totals: dict[str, Decimal | str], order_id: str, raw: str) -> None:
+    # Decimal() aceitaria " 10.00", "1_000" e dígitos de outros alfabetos, corrigindo o dado
+    # em silêncio. Um valor fora do contrato não é somado: o pedido passa a levar o valor cru,
+    # e a conciliação o põe em rejected.csv como faria com qualquer outro extrato.
+    current = totals.get(order_id, Decimal(0))
+    if isinstance(current, str):
+        return
+    totals[order_id] = current + Decimal(raw) if is_valid_amount(raw) else raw
+
+
+def _write(
+    path: Path, totals: dict[str, Decimal | str], orders: dict[str, tuple[str, str]]
+) -> None:
+    # str(Decimal) e não f"{:.2f}": a soma sai como veio, sem arredondar.
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file, lineterminator="\n")
         writer.writerow(HEADER)
