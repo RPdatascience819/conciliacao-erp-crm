@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import sys
 from collections.abc import Sequence
 from pathlib import Path
@@ -18,6 +19,11 @@ EXIT_ERROR = 2  # não executou: erro de uso ou de arquivo (argparse também usa
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Num pipe do Windows o stdout é cp1252, e um caminho com caractere fora dele quebrava
+    # o print depois de gravar, trocando o código de saída. UTF-8 codifica qualquer caminho.
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8")
     args = _parser().parse_args(argv)
     try:
         engine = get_engine(args.engine)
