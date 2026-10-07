@@ -16,8 +16,20 @@ from reconcile.engines import get_engine
 HEADER = ["order_id", "amount", "customer", "order_date"]
 
 # Alfabeto pequeno para forçar colisões de ID e casamentos entre os lados.
-ids = st.sampled_from(["A", "B", "C", "a", " A", "A ", "", "  ", "007"])
-amounts = st.sampled_from(["1", "1.0", "1.00", "2", "-1", "0", "1.005", "abc", "", "1e3", "NaN"])
+# Espaços Unicode: com pyarrow instalado, o pandas usa strings Arrow, e strip/fullmatch
+# precisam continuar concordando com o stdlib. \x1c e U+2028 são espaço e também quebra
+# de linha para o Python (splitlines), o caso mais traiçoeiro para os leitores de CSV.
+unicode_ids = [
+    "\N{NO-BREAK SPACE}A",
+    "A\N{IDEOGRAPHIC SPACE}",
+    "\N{INFORMATION SEPARATOR FOUR}",
+    "A\N{LINE SEPARATOR}",
+]
+ids = st.sampled_from(["A", "B", "C", "a", " A", "A ", "", "  ", "007", *unicode_ids])
+unicode_amounts = ["1\N{NO-BREAK SPACE}", "\N{FULLWIDTH DIGIT ONE}", "\N{ARABIC-INDIC DIGIT ONE}"]
+amounts = st.sampled_from(
+    ["1", "1.0", "1.00", "2", "-1", "0", "1.005", "abc", "", "1e3", "NaN", *unicode_amounts]
+)
 texts = st.sampled_from(["c", "", "00123", "Silva, Ana", 'dito "x"', "duas\nlinhas", "cr\rsolto"])
 
 good_rows = st.tuples(ids, amounts, texts, texts).map(list)
