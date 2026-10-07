@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import sys
 import zipfile
 from pathlib import Path
@@ -8,6 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 
+import olist  # noqa: E402
 from olist import build_extracts  # noqa: E402
 
 from reconcile.engines import get_engine  # noqa: E402
@@ -92,3 +94,25 @@ def test_raw_value_outside_contract_reaches_quarantine_unchanged(tmp_path: Path,
         ("o1", raw, "invalid_amount"),
         ("o4", "1.005", "invalid_amount"),
     ]
+
+
+class _DroppedConnection(io.BytesIO):
+    """Resposta que entrega um pedaço e cai, como uma conexão interrompida."""
+
+    def read(self, size: int | None = -1) -> bytes:
+        if self.tell() > 0:
+            raise ConnectionResetError("conexão interrompida")
+        return super().read(4)
+
+
+def test_interrupted_download_leaves_no_archive_behind(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Um zip parcial seria tratado como válido na próxima execução, que pula o download.
+    monkeypatch.setattr(
+        "urllib.request.urlopen", lambda *a, **k: _DroppedConnection(b"PK\x03\x04-resto")
+    )
+    dest = tmp_path / "olist" / "archive.zip"
+    with pytest.raises(ConnectionResetError):
+        olist.download(dest)
+    assert not dest.exists()

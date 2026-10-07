@@ -75,9 +75,13 @@ def _write(
 
 
 def download(dest: Path) -> None:
+    # Baixa em .part e só renomeia no fim: um zip parcial com o nome final seria tratado
+    # como válido na próxima execução, que pula o download.
     dest.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(DATASET_URL, timeout=300) as response, dest.open("wb") as file:
+    partial = dest.with_name(dest.name + ".part")
+    with urllib.request.urlopen(DATASET_URL, timeout=300) as response, partial.open("wb") as file:
         shutil.copyfileobj(response, file)
+    partial.replace(dest)
 
 
 def main() -> None:
