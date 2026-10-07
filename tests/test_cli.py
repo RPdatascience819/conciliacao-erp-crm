@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -112,3 +114,22 @@ def test_write_error_names_the_file_and_says_nothing_changed(
     assert len(err.strip().splitlines()) == 1 and "Traceback" not in err
     assert "matched.csv" in err and "Acesso negado" in err
     assert "nenhuma saída foi alterada" in err
+
+
+def test_terminal_without_utf8_keeps_exit_code_and_message(
+    write_csv: WriteCsv, tmp_path: Path
+) -> None:
+    # Num pipe do Windows o stdout é cp1252: "Δ" não existe nele e o print quebrava depois
+    # de gravar, saindo com 1 ("há divergências") num caso todo conciliado.
+    erp = write_csv("erp.csv", HEADER + "A,1,c,d\n")
+    crm = write_csv("crm.csv", HEADER + "A,1.00,c,d\n")
+    out = tmp_path / "saída-Δ"
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252"}
+    done = subprocess.run(
+        [sys.executable, "-m", "reconcile", *args(erp, crm, out)],
+        capture_output=True,
+        env=env,
+        check=False,
+    )
+    assert done.returncode == 0, done.stderr.decode("utf-8", "replace")
+    assert f"saída: {out}" in done.stdout.decode("utf-8")
