@@ -1,0 +1,15 @@
+order_id,amount,customer,order_date
+PED-001,100.00,Ana Souza,2024-03-01
+PED-002,250.5,Bruno Lima,2024-03-02
+PED-003,80.00,"Silva, Carla",2024-03-02
+PED-004,-20.00,Diego Rocha,2024-03-03
+PED-005,1e3,Elisa Prado,2024-03-04
+PED-006,60.00,Fábio Nunes,2024-03-05
+PED-006,60.00,Fábio Nunes,2024-03-05
+ PED-007,45.00,Gabi Melo,2024-03-06
+PED-008,30.00,Hugo Reis
+,15.00,Íris Dias,2024-03-07
+PED-009,10.00,Ivo Paz,2024-03-07
+007,12.00,00123,07/03/2024
+
+PED-010,99.99,Joana Cruz,2024-03-08,nota extra

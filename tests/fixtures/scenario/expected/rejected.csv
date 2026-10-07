@@ -1,0 +1,10 @@
+source,line,reason,order_id,amount,customer,order_date,extra_fields
+erp,6,invalid_amount,PED-005,1e3,Elisa Prado,2024-03-04,
+erp,7,duplicate_id,PED-006,60.00,Fábio Nunes,2024-03-05,
+erp,8,duplicate_id,PED-006,60.00,Fábio Nunes,2024-03-05,
+erp,9,id_whitespace, PED-007,45.00,Gabi Melo,2024-03-06,
+erp,10,malformed_row,PED-008,30.00,Hugo Reis,,
+erp,11,missing_id,,15.00,Íris Dias,2024-03-07,
+erp,14,malformed_row,,,,,
+erp,15,malformed_row,PED-010,99.99,Joana Cruz,2024-03-08,"[""nota extra""]"
+crm,8,invalid_amount,PED-012,100.005,Leo Batista,2024-03-10,

@@ -78,10 +78,12 @@ tests/
   test_scenario.py          # ponta a ponta, byte a byte
   test_properties.py        # hypothesis
   test_generate.py          # fumaça do gerador
+  test_olist.py             # extração do Olist com zip mínimo (Fase 1.5)
   fixtures/scenario/        # 2 CSVs de entrada + expected/ (6 arquivos)
 tools/
   generate.py               # dados sintéticos em escala
   benchmark.py              # stdlib × pandas, fora da suíte
+  olist.py                  # estudo de caso: baixa o Olist e monta o par ERP × CRM (Fase 1.5)
 ```
 
 ---
@@ -101,7 +103,7 @@ tools/
   - `class InputError(Exception)`
   - `is_valid_amount(text: str) -> bool`, `read_text(path: Path) -> str`, `column_positions(path: Path, header: list[str]) -> dict[str, int]`, `raw_fields(header: list[str], fields: list[str]) -> dict[str, str]`
 
-- [ ] **Step 1: Criar o repositório e gravar o design antes de qualquer código**
+- [x] **Step 1: Criar o repositório e gravar o design antes de qualquer código**
 
 A spec e este plano entram sozinhos no primeiro commit, para que o histórico mostre que o design veio antes do código.
 
@@ -113,7 +115,7 @@ git commit -m "docs: spec e plano da conciliação ERP × CRM" -m "Co-Authored-B
 
 Expected: `git log --oneline` mostra 1 commit; `git show --stat HEAD` lista só os dois arquivos em `docs/superpowers/`.
 
-- [ ] **Step 2: Criar `.gitignore`**
+- [x] **Step 2: Criar `.gitignore`**
 
 ```gitignore
 .venv/
@@ -130,7 +132,7 @@ output/
 data/
 ```
 
-- [ ] **Step 3: Criar `.gitattributes`**
+- [x] **Step 3: Criar `.gitattributes`**
 
 ```gitattributes
 * text=auto eol=lf
@@ -139,7 +141,7 @@ data/
 tests/fixtures/** -text
 ```
 
-- [ ] **Step 4: Criar `pyproject.toml`**
+- [x] **Step 4: Criar `pyproject.toml`**
 
 ```toml
 [build-system]
@@ -184,7 +186,7 @@ module = ["pandas", "pandas.*"]
 ignore_missing_imports = true
 ```
 
-- [ ] **Step 5: Criar `README.md` provisório e o pacote**
+- [x] **Step 5: Criar `README.md` provisório e o pacote**
 
 `README.md` (o hatchling exige o arquivo citado em `readme`; o conteúdo final vem na Tarefa 9):
 
@@ -198,7 +200,7 @@ ignore_missing_imports = true
 """Conciliação de pedidos entre extratos CSV de ERP e CRM."""
 ```
 
-- [ ] **Step 6: Criar o venv e instalar em modo editável**
+- [x] **Step 6: Criar o venv e instalar em modo editável**
 
 ```bash
 uv venv --python 3.11 .venv
@@ -208,7 +210,7 @@ uv pip install --python .venv -e ".[pandas,dev]"
 
 Expected: imprime uma versão `3.x` do pandas.
 
-- [ ] **Step 7: Escrever os testes do contrato (vão falhar)**
+- [x] **Step 7: Escrever os testes do contrato (vão falhar)**
 
 `tests/test_contract.py`:
 
@@ -299,12 +301,12 @@ def test_column_positions_rejects_repeated_column() -> None:
         column_positions(Path("x.csv"), header)
 ```
 
-- [ ] **Step 8: Rodar e ver falhar**
+- [x] **Step 8: Rodar e ver falhar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_contract.py -q`
 Expected: erro de coleta com `ModuleNotFoundError: No module named 'reconcile.contract'`.
 
-- [ ] **Step 9: Implementar `src/reconcile/contract.py`**
+- [x] **Step 9: Implementar `src/reconcile/contract.py`**
 
 ```python
 """Contrato compartilhado entre os motores: tipos do resultado e regras de formato.
@@ -438,12 +440,12 @@ def raw_fields(header: list[str], fields: list[str]) -> dict[str, str]:
 
 Atenção ao `"\N{BYTE ORDER MARK}"`: escreva o escape com o nome, como está. Um `\u` digitado pode chegar ao disco como o caractere invisível, que nenhuma revisão enxerga.
 
-- [ ] **Step 10: Rodar e ver passar**
+- [x] **Step 10: Rodar e ver passar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_contract.py -q`
 Expected: `28 passed`.
 
-- [ ] **Step 11: Lint, formatação e tipos**
+- [x] **Step 11: Lint, formatação e tipos**
 
 ```bash
 .venv/Scripts/python -m ruff check src tests
@@ -453,7 +455,7 @@ Expected: `28 passed`.
 
 Expected: `All checks passed!`, nenhum arquivo a reformatar, `Success: no issues found`.
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add .gitignore .gitattributes pyproject.toml README.md src tests
@@ -479,7 +481,7 @@ git commit -m "feat: projeto e contrato compartilhado entre os motores" -m "Co-A
 
 Os testes desta tarefa são **a bateria dos dois motores**: na Tarefa 3, acrescentar `"pandas"` a `ENGINE_NAMES` faz cada um deles rodar também no motor pandas.
 
-- [ ] **Step 1: Criar o registro de motores, por enquanto só com o stdlib**
+- [x] **Step 1: Criar o registro de motores, por enquanto só com o stdlib**
 
 `src/reconcile/engines/__init__.py`:
 
@@ -520,7 +522,7 @@ def get_engine(name: str) -> Engine:
     raise ValueError(f"motor desconhecido: {name!r}")
 ```
 
-- [ ] **Step 2: Criar `tests/conftest.py`**
+- [x] **Step 2: Criar `tests/conftest.py`**
 
 ```python
 from __future__ import annotations
@@ -564,7 +566,7 @@ def run(engine: Engine, write_csv: Callable[[str, str], Path]) -> Run:
     return run_
 ```
 
-- [ ] **Step 3: Escrever os testes de casamento**
+- [x] **Step 3: Escrever os testes de casamento**
 
 `tests/test_matching.py`:
 
@@ -666,7 +668,7 @@ def test_bom_and_crlf_are_accepted(run: Run) -> None:
     assert [p.erp.order_id for p in result.matched] == ["A"]
 ```
 
-- [ ] **Step 4: Escrever os testes de rejeição**
+- [x] **Step 4: Escrever os testes de rejeição**
 
 `tests/test_rejections.py`:
 
@@ -786,7 +788,7 @@ def test_rejected_sorted_erp_first_then_by_line(run: Run) -> None:
     ]
 ```
 
-- [ ] **Step 5: Escrever os testes de erro de arquivo**
+- [x] **Step 5: Escrever os testes de erro de arquivo**
 
 `tests/test_file_errors.py`:
 
@@ -840,12 +842,12 @@ def test_missing_file(engine: Engine, write_csv: WriteCsv, tmp_path: Path) -> No
         engine(tmp_path / "sumiu.csv", write_csv("bom.csv", HEADER))
 ```
 
-- [ ] **Step 6: Rodar e ver falhar**
+- [x] **Step 6: Rodar e ver falhar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_matching.py tests/test_rejections.py tests/test_file_errors.py -q`
 Expected: os 45 testes terminam em `ERROR` no fixture `engine`, com `ModuleNotFoundError: No module named 'reconcile.engines.stdlib_engine'`.
 
-- [ ] **Step 7: Implementar `src/reconcile/engines/stdlib_engine.py`**
+- [x] **Step 7: Implementar `src/reconcile/engines/stdlib_engine.py`**
 
 ```python
 """Motor da biblioteca padrão: csv + decimal, linha a linha."""
@@ -960,12 +962,12 @@ def _reason(
 
 Pontos que um revisor deve conferir aqui: `csv.reader(..., strict=True)` (Review Focus 1); `io.StringIO(text, newline="")` para que o `csv` trate `\r\n` e quebras dentro de aspas; a contagem de duplicidade inclui o ID provável das linhas malformadas e exclui IDs em branco.
 
-- [ ] **Step 8: Rodar e ver passar**
+- [x] **Step 8: Rodar e ver passar**
 
 Run: `.venv/Scripts/python -m pytest -q`
 Expected: `73 passed` (28 do contrato + 45 desta tarefa).
 
-- [ ] **Step 9: Lint, formatação e tipos**
+- [x] **Step 9: Lint, formatação e tipos**
 
 ```bash
 .venv/Scripts/python -m ruff check src tests
@@ -975,7 +977,7 @@ Expected: `73 passed` (28 do contrato + 45 desta tarefa).
 
 Expected: tudo limpo.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add src tests
@@ -996,7 +998,7 @@ git commit -m "feat: motor stdlib com quarentena e casamento por order_id" -m "C
 
 Esta tarefa não escreve testes novos: o TDD aqui é ligar o motor na bateria existente e vê-la falhar.
 
-- [ ] **Step 1: Ligar o motor pandas na bateria**
+- [x] **Step 1: Ligar o motor pandas na bateria**
 
 Em `src/reconcile/engines/__init__.py`, trocar:
 
@@ -1010,12 +1012,12 @@ por:
 ENGINE_NAMES = ("stdlib", "pandas")
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `.venv/Scripts/python -m pytest -q`
 Expected: os 45 testes `[pandas]` falham com `ModuleNotFoundError: No module named 'reconcile.engines.pandas_engine'`; os 73 restantes passam.
 
-- [ ] **Step 3: Implementar `src/reconcile/engines/pandas_engine.py`**
+- [x] **Step 3: Implementar `src/reconcile/engines/pandas_engine.py`**
 
 ```python
 """Motor pandas: a mesma conciliação, com operações vetorizadas.
@@ -1196,17 +1198,17 @@ def _orders(frame: pd.DataFrame, suffix: str) -> tuple[Order, ...]:
 
 Pontos que um revisor deve conferir aqui: nenhuma conversão passa por `float` (`Decimal` só nas linhas válidas); `np.select` recebe as condições na mesma ordem de `Reason`, e trocar uma das duas listas sem a outra rotula errado; `skip_blank_lines=False`; a segunda leitura só acontece quando alguma linha é mais larga que o cabeçalho.
 
-- [ ] **Step 4: Rodar e ver passar**
+- [x] **Step 4: Rodar e ver passar**
 
 Run: `.venv/Scripts/python -m pytest -q`
 Expected: `118 passed`.
 
-- [ ] **Step 5: Conferir que a bateria realmente pega o motor pandas**
+- [x] **Step 5: Conferir que a bateria realmente pega o motor pandas**
 
 Mutação temporária: em `pandas_engine.py`, troque `ids.duplicated(keep=False) & filled` por `ids.duplicated(keep=False) & filled & False` e rode `.venv/Scripts/python -m pytest -q`.
 Expected: 3 falhas, todas `[pandas]`, em `test_rejections.py` (as de duplicidade). **Desfaça a mutação** e confirme `118 passed` de novo.
 
-- [ ] **Step 6: Lint, formatação e tipos**
+- [x] **Step 6: Lint, formatação e tipos**
 
 ```bash
 .venv/Scripts/python -m ruff check src tests
@@ -1216,7 +1218,7 @@ Expected: 3 falhas, todas `[pandas]`, em `test_rejections.py` (as de duplicidade
 
 Expected: tudo limpo.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src
@@ -1240,7 +1242,7 @@ git commit -m "feat: motor pandas equivalente, lendo tudo como texto" -m "Co-Aut
   - `reconcile.writer.write_outputs(result, erp_input: InputFile, crm_input: InputFile, out_dir: Path) -> None`
   - `reconcile.writer.render_summary(result, erp_input, crm_input) -> str`
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 `tests/test_writer.py`:
 
@@ -1369,12 +1371,12 @@ def test_fingerprint_uses_name_and_sha256(tmp_path: Path) -> None:
     )
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_writer.py -q`
 Expected: erro de coleta com `ModuleNotFoundError: No module named 'reconcile.inputs'`.
 
-- [ ] **Step 3: Implementar `src/reconcile/inputs.py`**
+- [x] **Step 3: Implementar `src/reconcile/inputs.py`**
 
 ```python
 """Procedência das entradas: nome do arquivo e SHA-256 do conteúdo."""
@@ -1398,7 +1400,7 @@ def fingerprint(path: Path) -> InputFile:
     return InputFile(name=path.name, sha256=digest)
 ```
 
-- [ ] **Step 4: Implementar `src/reconcile/writer.py`**
+- [x] **Step 4: Implementar `src/reconcile/writer.py`**
 
 ```python
 """Grava os 6 arquivos de saída a partir de um ReconciliationResult.
@@ -1638,12 +1640,12 @@ def render_summary(result: ReconciliationResult, erp_input: InputFile, crm_input
     return "\n".join(lines) + "\n"
 ```
 
-- [ ] **Step 5: Rodar e ver passar**
+- [x] **Step 5: Rodar e ver passar**
 
 Run: `.venv/Scripts/python -m pytest -q`
 Expected: `128 passed`.
 
-- [ ] **Step 6: Lint, formatação e tipos**
+- [x] **Step 6: Lint, formatação e tipos**
 
 ```bash
 .venv/Scripts/python -m ruff check src tests
@@ -1651,7 +1653,7 @@ Expected: `128 passed`.
 .venv/Scripts/python -m mypy
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src tests
@@ -1670,7 +1672,7 @@ git commit -m "feat: gravação determinística das 6 saídas e do summary.md" -
 - Consumes: `get_engine`, `ENGINE_NAMES`, `EngineUnavailable` (Tarefas 2–3); `InputError` (Tarefa 1); `fingerprint` e `write_outputs` (Tarefa 4).
 - Produces: `reconcile.cli.main(argv: Sequence[str] | None = None) -> int`; o comando `reconcile` (via `[project.scripts]`, já declarado na Tarefa 1) e `python -m reconcile`.
 
-- [ ] **Step 1: Escrever os testes**
+- [x] **Step 1: Escrever os testes**
 
 `tests/test_cli.py`:
 
@@ -1772,12 +1774,12 @@ def test_default_out_dir_is_output(
     assert (tmp_path / "output" / "matched.csv").exists()
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_cli.py -q`
 Expected: erro de coleta com `ModuleNotFoundError: No module named 'reconcile.cli'`.
 
-- [ ] **Step 3: Implementar `src/reconcile/cli.py`**
+- [x] **Step 3: Implementar `src/reconcile/cli.py`**
 
 ```python
 """Linha de comando: argumentos -> motor -> gravação -> resumo no terminal."""
@@ -1845,7 +1847,7 @@ def _report(engine: str, result: ReconciliationResult, out_dir: Path) -> None:
     print(f"saída: {out_dir}")
 ```
 
-- [ ] **Step 4: Implementar `src/reconcile/__main__.py`**
+- [x] **Step 4: Implementar `src/reconcile/__main__.py`**
 
 ```python
 from reconcile.cli import main
@@ -1853,17 +1855,17 @@ from reconcile.cli import main
 raise SystemExit(main())
 ```
 
-- [ ] **Step 5: Rodar e ver passar**
+- [x] **Step 5: Rodar e ver passar**
 
 Run: `.venv/Scripts/python -m pytest -q`
 Expected: `139 passed`.
 
-- [ ] **Step 6: Conferir o comando instalado**
+- [x] **Step 6: Conferir o comando instalado**
 
 Run: `.venv/Scripts/reconcile --help`
 Expected: ajuda do argparse com `--erp`, `--crm`, `--out`, `--engine {stdlib,pandas}`.
 
-- [ ] **Step 7: Lint, formatação e tipos**
+- [x] **Step 7: Lint, formatação e tipos**
 
 ```bash
 .venv/Scripts/python -m ruff check src tests
@@ -1871,7 +1873,7 @@ Expected: ajuda do argparse com `--erp`, `--crm`, `--out`, `--engine {stdlib,pan
 .venv/Scripts/python -m mypy
 ```
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src tests
@@ -1892,7 +1894,7 @@ git commit -m "feat: CLI com códigos de saída 0/1/2" -m "Co-Authored-By: Claud
 
 O cenário cobre cada grupo e cada motivo de rejeição: valor `1e3`, ID duplicado, ID com espaço, linha curta, ID vazio, linha vazia, campo a mais, ID `007` e `customer` `00123` preservados, campo com vírgula e com quebra de linha, valor `250.5` × `250.50` casando e `80.00` × `80.01` divergindo.
 
-- [ ] **Step 1: Criar as entradas**
+- [x] **Step 1: Criar as entradas**
 
 `tests/fixtures/scenario/erp_orders.csv` (a linha 14 é vazia de propósito; o arquivo termina com uma única quebra de linha):
 
@@ -1937,7 +1939,7 @@ Confira que nenhum dos dois tem `\r`:
 
 Expected: `[]`.
 
-- [ ] **Step 2: Escrever o teste**
+- [x] **Step 2: Escrever o teste**
 
 `tests/test_scenario.py`:
 
@@ -1989,12 +1991,12 @@ def test_output_matches_reviewed_file_byte_for_byte(tmp_path: Path, engine: str,
     assert (tmp_path / name).read_bytes() == (SCENARIO / "expected" / name).read_bytes()
 ```
 
-- [ ] **Step 3: Rodar e ver falhar**
+- [x] **Step 3: Rodar e ver falhar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_scenario.py -q`
 Expected: `12 failed, 2 passed`. Os 12 testes byte a byte falham com `FileNotFoundError` (ainda não existe `expected/`); os 2 que passam são os de LF das entradas. Depois do Step 4 o teste de LF passa a cobrir também os 6 arquivos esperados.
 
-- [ ] **Step 4: Gerar os arquivos esperados e revisar um por um**
+- [x] **Step 4: Gerar os arquivos esperados e revisar um por um**
 
 ```bash
 .venv/Scripts/python -m reconcile --erp tests/fixtures/scenario/erp_orders.csv --crm tests/fixtures/scenario/crm_orders.csv --out tests/fixtures/scenario/expected
@@ -2098,12 +2100,12 @@ Cada linha lida de um arquivo está em exatamente um grupo. "Só neste lado" é 
 | invalid_amount | 1 | 1 |
 ````
 
-- [ ] **Step 5: Rodar e ver passar**
+- [x] **Step 5: Rodar e ver passar**
 
 Run: `.venv/Scripts/python -m pytest -q`
 Expected: `159 passed`.
 
-- [ ] **Step 6: Lint, formatação e tipos**
+- [x] **Step 6: Lint, formatação e tipos**
 
 ```bash
 .venv/Scripts/python -m ruff check src tests
@@ -2111,7 +2113,7 @@ Expected: `159 passed`.
 .venv/Scripts/python -m mypy
 ```
 
-- [ ] **Step 7: Commit e conferência do `-text`**
+- [x] **Step 7: Commit e conferência do `-text`**
 
 ```bash
 git add tests
@@ -2132,7 +2134,7 @@ Expected na última linha: `tests/fixtures/scenario/erp_orders.csv: text: unset`
 - Consumes: `get_engine("stdlib")`, `get_engine("pandas")`, `ReconciliationResult`.
 - Produces: nada.
 
-- [ ] **Step 1: Escrever o teste**
+- [x] **Step 1: Escrever o teste**
 
 `tests/test_properties.py`:
 
@@ -2222,17 +2224,17 @@ def test_engines_agree_and_every_row_lands_exactly_once(
     assert all(p.erp.amount != p.crm.amount for p in result.amount_mismatch)
 ```
 
-- [ ] **Step 2: Rodar**
+- [x] **Step 2: Rodar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_properties.py -q --hypothesis-show-statistics`
 Expected: `1 passed`, com `200 passing` nas estatísticas. (Este teste passa de primeira, porque o código já existe; o próximo passo prova que ele não é decorativo.)
 
-- [ ] **Step 3: Conferir que a propriedade pega divergência entre os motores**
+- [x] **Step 3: Conferir que a propriedade pega divergência entre os motores**
 
 Mutação temporária: em `pandas_engine.py`, dentro da lista de condições do `np.select`, troque a ordem de `~filled,` e `ids != stripped,`. Rode o Step 2.
 Expected: falha com um exemplo mínimo do tipo `crm=[[' A', '1', 'c', 'c']]`. **Desfaça a mutação** e confirme `1 passed`.
 
-- [ ] **Step 4: Suíte completa, lint e tipos**
+- [x] **Step 4: Suíte completa, lint e tipos**
 
 ```bash
 .venv/Scripts/python -m pytest -q
@@ -2243,7 +2245,7 @@ Expected: falha com um exemplo mínimo do tipo `crm=[[' A', '1', 'c', 'c']]`. **
 
 Expected: `160 passed`; o resto limpo.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests
@@ -2263,7 +2265,7 @@ git commit -m "test: propriedades de equivalência, partição, fechamento e coe
 - Consumes: `get_engine`, `ENGINE_NAMES`, `Engine`.
 - Produces: `generate(orders: int, out_dir: Path, seed: int, rates: Rates | None = None) -> tuple[Path, Path]` (ERP, CRM); `Rates` (dataclass de taxas por defeito).
 
-- [ ] **Step 1: Escrever o teste de fumaça**
+- [x] **Step 1: Escrever o teste de fumaça**
 
 `tests/test_generate.py`:
 
@@ -2305,12 +2307,12 @@ def test_same_seed_same_bytes(tmp_path: Path) -> None:
     assert [p.read_bytes() for p in first] == [p.read_bytes() for p in second]
 ```
 
-- [ ] **Step 2: Rodar e ver falhar**
+- [x] **Step 2: Rodar e ver falhar**
 
 Run: `.venv/Scripts/python -m pytest tests/test_generate.py -q`
 Expected: erro de coleta com `ModuleNotFoundError: No module named 'generate'`.
 
-- [ ] **Step 3: Implementar `tools/generate.py`**
+- [x] **Step 3: Implementar `tools/generate.py`**
 
 ```python
 """Gera um par de CSVs sintéticos em escala, com defeitos plantados em taxas configuráveis.
@@ -2420,7 +2422,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: Implementar `tools/benchmark.py`**
+- [x] **Step 4: Implementar `tools/benchmark.py`**
 
 ```python
 """Mede o tempo dos dois motores sobre os mesmos dados. Fica fora da suíte de testes.
@@ -2472,7 +2474,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 5: Incluir `tools` na checagem de tipos**
+- [x] **Step 5: Incluir `tools` na checagem de tipos**
 
 Em `pyproject.toml`, na seção `[tool.mypy]`, trocar:
 
@@ -2486,7 +2488,7 @@ por:
 files = ["src", "tests", "tools"]
 ```
 
-- [ ] **Step 6: Rodar tudo**
+- [x] **Step 6: Rodar tudo**
 
 ```bash
 .venv/Scripts/python -m pytest -q
@@ -2497,12 +2499,12 @@ files = ["src", "tests", "tools"]
 
 Expected: `162 passed`; o resto limpo.
 
-- [ ] **Step 7: Rodar o benchmark uma vez**
+- [x] **Step 7: Rodar o benchmark uma vez**
 
 Run: `.venv/Scripts/python tools/benchmark.py --orders 10000 100000 --repeat 3`
 Expected: uma linha com a máquina e uma tabela Markdown com 4 linhas. Guarde a saída: ela vai para o README na Tarefa 9. (No rascunho, numa máquina Intel com Windows: stdlib 0,87 s e pandas 1,56 s para 100 mil pedidos; os seus números vão variar.)
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add tools tests pyproject.toml
@@ -2523,7 +2525,7 @@ git commit -m "feat: gerador de dados sintéticos e benchmark dos motores" -m "C
 
 As versões das actions foram conferidas no GitHub em 2026-10-02: `actions/checkout@v7` (v7.0.1) e `actions/setup-python@v7` (v7.0.0, entrada `python-version` mantida).
 
-- [ ] **Step 1: Criar `.github/workflows/ci.yml`**
+- [x] **Step 1: Criar `.github/workflows/ci.yml`**
 
 ```yaml
 name: CI
@@ -2560,7 +2562,7 @@ jobs:
 
 A matriz Ubuntu × Windows é o que prova a afirmação "saída idêntica byte a byte nos dois sistemas": o mesmo `tests/fixtures/scenario/expected/` é comparado nos dois.
 
-- [ ] **Step 2: Escrever o `README.md` final**
+- [x] **Step 2: Escrever o `README.md` final**
 
 ````markdown
 # Conciliação de pedidos ERP × CRM
@@ -2658,11 +2660,11 @@ cada valor válido para `Decimal`, em vez de usar `float`. A comparação mostra
 exigir exatidão de uma ferramenta feita para velocidade.
 ````
 
-- [ ] **Step 3: Colar a tabela do benchmark**
+- [x] **Step 3: Colar a tabela do benchmark**
 
 No `README.md`, substituir a linha `<!-- tabela do benchmark -->` pelas linhas que o benchmark imprimiu na Tarefa 8, Step 7 (a linha da máquina e a tabela).
 
-- [ ] **Step 4: Verificação final local**
+- [x] **Step 4: Verificação final local**
 
 ```bash
 .venv/Scripts/python -m pytest -q --cov=reconcile --cov-report=term-missing
@@ -2674,7 +2676,7 @@ git status --short
 
 Expected: `162 passed` e a tabela de cobertura; lint e tipos limpos; `git status` mostra só `README.md` e `.github/`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add README.md .github
@@ -2682,3 +2684,346 @@ git commit -m "docs: README e CI com Ubuntu e Windows" -m "Co-Authored-By: Claud
 ```
 
 A publicação no GitHub (criar o repositório remoto e fazer o push) **não faz parte deste plano**: é uma ação externa e precisa da confirmação do usuário. A CI só roda depois dela.
+
+---
+
+## Fase 1.5 — Estudo de caso com dados públicos (Olist)
+
+Esta fase entrou em 2026-10-02, depois da execução das Tarefas 1–9 e da revisão final. A spec exige uma verificação barata antes de construir qualquer coisa, e ela foi feita antes de escrever as tarefas:
+
+| Verificação da spec | Resultado (2026-10-02) |
+|---|---|
+| As somas divergem de fato? | **Sim.** 576 pedidos têm pagamento ≠ preço + frete (0,58% dos 98.665 presentes nos dois lados); 775 só têm pagamento e 1 só tem itens. A contagem foi feita duas vezes, por caminhos independentes: um script de contagem e a própria ferramenta, nos dois motores. |
+| A licença permite redistribuir? | **CC BY-NC-SA 4.0**, conforme o metadado da API do Kaggle. A redistribuição seria permitida com atribuição e mesma licença, mas o *share-alike* contaminaria o repositório, e o arquivo tem 45 MB. **Decisão: o script baixa os dados, que ficam em `data/` (ignorada pelo git).** |
+| Dá para baixar sem conta? | **Sim.** `https://www.kaggle.com/api/v1/datasets/download/olistbr/brazilian-ecommerce` responde 302 para um link assinado, sem autenticação. |
+
+Como no resto do plano, o código abaixo foi executado antes de entrar aqui. Os 2 testes passam. A execução sobre os dados reais deu os números do Step 2 da Tarefa 11, iguais nos dois motores.
+
+**Decisões desta fase:**
+
+| # | Decisão | Por quê |
+|---|---|---|
+| P10 | A soma sai com `str(Decimal)`, nunca com `f"{:.2f}"`. | É o princípio da Seção 4: a extração não pode arredondar. Se uma versão futura do Olist trouxer um valor com 3 casas, ele vai para `rejected.csv` como qualquer outro. |
+| P11 | O cliente é o `customer_id` e a data é o dia de `order_purchase_timestamp`, ambos de `olist_orders_dataset.csv`. Pedido ausente desse arquivo sai com os dois campos vazios. | São as colunas que o contrato exige, e o Olist não tem nome de cliente. |
+| P12 | O script imprime o SHA-256 do arquivo baixado, e o README cita o hash junto dos números. | O Kaggle pode publicar versões novas; o hash diz a qual versão os números se referem. |
+| P13 | O teste usa um zip mínimo montado no próprio teste, sem rede. | Assim a suíte roda na CI sem internet e sem depender do Kaggle. A execução real (Tarefa 11) fica fora da suíte, como a spec pede. |
+
+### Task 10: Extração do Olist
+
+**Files:**
+- Create: `tools/olist.py`
+- Test: `tests/test_olist.py`
+
+**Interfaces:**
+- Consumes: `reconcile.engines.get_engine` (Tarefa 2), no teste.
+- Produces:
+  - `olist.build_extracts(archive_path: Path, out_dir: Path) -> tuple[Path, Path]`, que devolve os caminhos de `erp_orders.csv` e `crm_orders.csv`;
+  - `olist.download(dest: Path) -> None`;
+  - o comando `python tools/olist.py [--archive] [--out]`.
+
+- [ ] **Step 1: Escrever os testes**
+
+`tests/test_olist.py`:
+
+```python
+from __future__ import annotations
+
+import sys
+import zipfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+
+from olist import build_extracts  # noqa: E402
+
+from reconcile.engines import get_engine  # noqa: E402
+
+ORDERS = (
+    "order_id,customer_id,order_status,order_purchase_timestamp\n"
+    "o1,c1,delivered,2017-10-02 10:56:33\n"
+    "o2,c2,delivered,2018-07-24 20:41:37\n"
+    "o3,c3,delivered,2018-08-08 08:38:49\n"
+)
+PAYMENTS = (
+    "order_id,payment_sequential,payment_type,payment_installments,payment_value\n"
+    "o1,1,credit_card,1,10.5\n"
+    "o1,2,voucher,1,5.00\n"
+    "o2,1,boleto,1,20.00\n"
+    "o4,1,boleto,1,1.005\n"
+)
+ITEMS = (
+    "order_id,order_item_id,product_id,seller_id,shipping_limit_date,price,freight_value\n"
+    "o1,1,p1,s1,2017-10-06 11:07:15,12.00,3.50\n"
+    "o2,1,p2,s2,2018-07-30 03:24:27,18.00,1.99\n"
+    "o3,1,p3,s3,2018-08-13 08:55:23,7.00,0.00\n"
+)
+
+
+def make_archive(path: Path) -> Path:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("olist_orders_dataset.csv", ORDERS)
+        archive.writestr("olist_order_payments_dataset.csv", PAYMENTS)
+        archive.writestr("olist_order_items_dataset.csv", ITEMS)
+    return path
+
+
+def test_extracts_sum_payments_and_items_per_order(tmp_path: Path) -> None:
+    erp, crm = build_extracts(make_archive(tmp_path / "olist.zip"), tmp_path / "out")
+    assert erp.read_bytes().decode("utf-8") == (
+        "order_id,amount,customer,order_date\n"
+        "o1,15.50,c1,2017-10-02\n"
+        "o2,20.00,c2,2018-07-24\n"
+        "o4,1.005,,\n"
+    )
+    assert crm.read_bytes().decode("utf-8") == (
+        "order_id,amount,customer,order_date\n"
+        "o1,15.50,c1,2017-10-02\n"
+        "o2,19.99,c2,2018-07-24\n"
+        "o3,7.00,c3,2018-08-08\n"
+    )
+
+
+def test_extracts_reconcile_into_every_group(tmp_path: Path) -> None:
+    erp, crm = build_extracts(make_archive(tmp_path / "olist.zip"), tmp_path / "out")
+    result = get_engine("stdlib")(erp, crm)
+    assert [p.erp.order_id for p in result.matched] == ["o1"]
+    assert [p.erp.order_id for p in result.amount_mismatch] == ["o2"]
+    assert [o.order_id for o in result.missing_in_erp] == ["o3"]
+    # Valor com 3 casas não é arredondado na extração: chega à quarentena como veio.
+    assert [(r.raw["order_id"], r.reason.value) for r in result.rejected] == [
+        ("o4", "invalid_amount")
+    ]
+```
+
+- [ ] **Step 2: Rodar e ver falhar**
+
+Run: `.venv/Scripts/python -m pytest tests/test_olist.py -q`
+Expected: erro de coleta com `ModuleNotFoundError: No module named 'olist'`.
+
+- [ ] **Step 3: Implementar `tools/olist.py`**
+
+```python
+"""Estudo de caso com dados públicos: o Olist Brazilian E-commerce visto como ERP × CRM.
+
+"ERP" é a soma dos pagamentos de cada pedido; "CRM" é a soma de preço + frete dos itens.
+Os dados são da Olist, sob licença CC BY-NC-SA 4.0, e não ficam no repositório: o script
+baixa o arquivo do Kaggle para data/olist/ (ignorada pelo git) e grava os extratos ao lado.
+
+Uso: python tools/olist.py [--archive data/olist/archive.zip] [--out data/olist]
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import hashlib
+import io
+import shutil
+import urllib.request
+import zipfile
+from collections import defaultdict
+from collections.abc import Iterator
+from decimal import Decimal
+from pathlib import Path
+
+DATASET_URL = "https://www.kaggle.com/api/v1/datasets/download/olistbr/brazilian-ecommerce"
+HEADER = ["order_id", "amount", "customer", "order_date"]
+
+
+def build_extracts(archive_path: Path, out_dir: Path) -> tuple[Path, Path]:
+    """Grava erp_orders.csv e crm_orders.csv a partir do zip do Olist."""
+    with zipfile.ZipFile(archive_path) as archive:
+        orders = {
+            row["order_id"]: (row["customer_id"], row["order_purchase_timestamp"][:10])
+            for row in _rows(archive, "olist_orders_dataset.csv")
+        }
+        erp: defaultdict[str, Decimal] = defaultdict(Decimal)
+        for row in _rows(archive, "olist_order_payments_dataset.csv"):
+            erp[row["order_id"]] += Decimal(row["payment_value"])
+        crm: defaultdict[str, Decimal] = defaultdict(Decimal)
+        for row in _rows(archive, "olist_order_items_dataset.csv"):
+            crm[row["order_id"]] += Decimal(row["price"]) + Decimal(row["freight_value"])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    erp_path, crm_path = out_dir / "erp_orders.csv", out_dir / "crm_orders.csv"
+    _write(erp_path, erp, orders)
+    _write(crm_path, crm, orders)
+    return erp_path, crm_path
+
+
+def _rows(archive: zipfile.ZipFile, name: str) -> Iterator[dict[str, str]]:
+    with archive.open(name) as raw:
+        yield from csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8", newline=""))
+
+
+def _write(path: Path, totals: dict[str, Decimal], orders: dict[str, tuple[str, str]]) -> None:
+    # str(Decimal) e não f"{:.2f}": a soma sai como veio, sem arredondar. Um valor fora do
+    # formato numa versão futura do Olist vai para rejected.csv em vez de ser corrigido aqui.
+    with path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, lineterminator="\n")
+        writer.writerow(HEADER)
+        for order_id in sorted(totals):
+            customer, order_date = orders.get(order_id, ("", ""))
+            writer.writerow([order_id, str(totals[order_id]), customer, order_date])
+
+
+def download(dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with urllib.request.urlopen(DATASET_URL, timeout=300) as response, dest.open("wb") as file:
+        shutil.copyfileobj(response, file)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--archive", type=Path, default=Path("data/olist/archive.zip"))
+    parser.add_argument("--out", type=Path, default=Path("data/olist"))
+    args = parser.parse_args()
+    if not args.archive.exists():
+        print(f"baixando {DATASET_URL}")
+        download(args.archive)
+    with args.archive.open("rb") as file:
+        # O Kaggle pode publicar versões novas: o hash identifica a que foi usada.
+        digest = hashlib.file_digest(file, "sha256").hexdigest()
+    print(f"arquivo: {args.archive} (SHA-256 {digest})")
+    erp_path, crm_path = build_extracts(args.archive, args.out)
+    print(f"extratos: {erp_path} e {crm_path}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+- [ ] **Step 4: Rodar e ver passar**
+
+Run: `.venv/Scripts/python -m pytest -q`
+Expected: `172 passed` (os 162 das Tarefas 1–9, mais 8 da revisão final, mais estes 2).
+
+- [ ] **Step 5: Lint, formatação e tipos**
+
+```bash
+.venv/Scripts/python -m ruff check src tests tools
+.venv/Scripts/python -m ruff format --check src tests tools
+.venv/Scripts/python -m mypy
+```
+
+Expected: tudo limpo.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add tools/olist.py tests/test_olist.py
+git commit -m "feat: extração do Olist como par ERP × CRM para o estudo de caso" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+### Task 11: Execução nos dados reais e README
+
+**Files:**
+- Modify: `README.md` (seção nova antes de `## Desempenho`)
+
+**Interfaces:**
+- Consumes: `python tools/olist.py` (Tarefa 10) e a CLI (Tarefa 5).
+- Produces: a seção "Estudo de caso" do README.
+
+- [ ] **Step 1: Baixar e extrair**
+
+Run: `.venv/Scripts/python tools/olist.py`
+Expected, nesta ordem:
+- a linha `baixando …`;
+- `arquivo: data\olist\archive.zip (SHA-256 967e41e04fc306fe604e2a693f488995a8b41e5047418f8a5c8e4abd6deca784)`;
+- a linha `extratos: …`.
+
+**Se o hash for outro**, o Kaggle publicou uma versão nova. Siga em frente, mas os números do Step 2 vão mudar, e o README deve citar o hash novo.
+
+- [ ] **Step 2: Conciliar nos dois motores**
+
+```bash
+.venv/Scripts/python -m reconcile --erp data/olist/erp_orders.csv --crm data/olist/crm_orders.csv --out output/olist-stdlib --engine stdlib
+.venv/Scripts/python -m reconcile --erp data/olist/erp_orders.csv --crm data/olist/crm_orders.csv --out output/olist-pandas --engine pandas
+diff -r output/olist-stdlib output/olist-pandas && echo "saídas idênticas"
+```
+
+Expected:
+- as duas execuções imprimem `matched: 98089 | amount_mismatch: 576 | missing_in_erp: 1 | missing_in_crm: 775 | rejected: 0` e saem com código 1;
+- o `diff` não mostra nada e imprime `saídas idênticas`.
+
+Se os motores divergirem aqui, **pare**: é um defeito dos motores que a bateria não pegou, e ele vira primeiro um teste que falha.
+
+- [ ] **Step 3: Conferir a hipótese antes de escrevê-la**
+
+```bash
+.venv/Scripts/python - <<'PY'
+import csv, io, zipfile
+
+z = zipfile.ZipFile("data/olist/archive.zip")
+with z.open("olist_order_payments_dataset.csv") as raw:
+    pay = list(csv.DictReader(io.TextIOWrapper(raw, encoding="utf-8")))
+parcelados = {
+    r["order_id"]
+    for r in pay
+    if r["payment_type"] == "credit_card" and int(r["payment_installments"]) > 1
+}
+todos = {r["order_id"] for r in pay}
+with open("output/olist-stdlib/amount_mismatch.csv", encoding="utf-8") as file:
+    divergentes = {r["order_id"] for r in csv.DictReader(file)}
+print(f"{len(parcelados & todos) / len(todos):.1%} {len(parcelados & divergentes) / len(divergentes):.1%}")
+PY
+```
+
+Expected: `51.5% 76.7%`, a fatia de pedidos parcelados no cartão entre todos os pedidos e entre os divergentes. O README cita os dois números porque um sem o outro não sustenta nada.
+
+- [ ] **Step 4: Escrever a seção no README**
+
+No `README.md`, inserir antes da linha `## Desempenho`:
+
+````markdown
+## Estudo de caso: dados públicos do Olist
+
+Os testes usam dados sintéticos porque precisam de gabarito: cada defeito é plantado e a
+resposta certa é conhecida. Para ver a ferramenta diante de dados reais, `tools/olist.py`
+monta um par ERP × CRM a partir do
+[Brazilian E-commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+(licença CC BY-NC-SA 4.0): "ERP" é a soma dos pagamentos de cada pedido e "CRM" é a soma de
+preço + frete dos itens. Os dados não ficam no repositório; o script baixa o arquivo.
+
+```bash
+python tools/olist.py
+python -m reconcile --erp data/olist/erp_orders.csv --crm data/olist/crm_orders.csv --out output/olist
+```
+
+Resultado com o arquivo de SHA-256 `967e41e04fc306fe604e2a693f488995a8b41e5047418f8a5c8e4abd6deca784`
+(os dois motores geram saídas idênticas byte a byte):
+
+| Grupo | Pedidos |
+|---|---|
+| matched | 98.089 |
+| amount_mismatch | 576 |
+| missing_in_erp | 1 |
+| missing_in_crm | 775 |
+| rejected | 0 |
+
+O que os números dizem, e o que não dizem:
+
+- **576 pedidos** (0,58% dos que existem nos dois lados) têm pagamento diferente de preço +
+  frete. A soma das diferenças é −2.870,39: no saldo, os pagamentos superam os itens.
+  76,7% desses pedidos foram parcelados no cartão, contra 51,5% de todos os pedidos, o que
+  sugere juros de parcelamento. É uma hipótese: os dados não trazem a taxa de juros.
+- **775 pedidos** têm pagamento e nenhum item; 603 estão com status `unavailable` e 164
+  com `canceled`. **1 pedido** tem item e nenhum pagamento.
+- **Nenhuma linha foi rejeitada.** O Olist vem limpo e os extratos são somas por pedido, então
+  este estudo não exercita a quarentena; quem faz isso são os dados sintéticos.
+````
+
+- [ ] **Step 5: Verificação final**
+
+```bash
+.venv/Scripts/python -m pytest -q
+git status --short
+```
+
+Expected: `172 passed`, e o `git status` mostra só `README.md` (`data/` e `output/` são ignoradas).
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add README.md
+git commit -m "docs: estudo de caso com os dados públicos do Olist" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```

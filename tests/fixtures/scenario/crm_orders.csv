@@ -1,0 +1,10 @@
+order_id,amount,customer,order_date
+PED-002,250.50,Bruno Lima,2024-03-02
+PED-001,100.00,Ana Souza,2024-03-01
+PED-003,80.01,Carla Silva,2024-03-02
+PED-004,-20,Diego Rocha,2024-03-03
+PED-011,70.00,Karen Alves,2024-03-09
+007,12,00123,2024-03-07
+PED-012,100.005,Leo Batista,2024-03-10
+"PED-013",55.00,"Maria
+Clara",2024-03-11
