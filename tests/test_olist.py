@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+import sys
+import zipfile
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+
+from olist import build_extracts  # noqa: E402
+
+from reconcile.engines import get_engine  # noqa: E402
+
+ORDERS = (
+    "order_id,customer_id,order_status,order_purchase_timestamp\n"
+    "o1,c1,delivered,2017-10-02 10:56:33\n"
+    "o2,c2,delivered,2018-07-24 20:41:37\n"
+    "o3,c3,delivered,2018-08-08 08:38:49\n"
+)
+PAYMENTS = (
+    "order_id,payment_sequential,payment_type,payment_installments,payment_value\n"
+    "o1,1,credit_card,1,10.5\n"
+    "o1,2,voucher,1,5.00\n"
+    "o2,1,boleto,1,20.00\n"
+    "o4,1,boleto,1,1.005\n"
+)
+ITEMS = (
+    "order_id,order_item_id,product_id,seller_id,shipping_limit_date,price,freight_value\n"
+    "o1,1,p1,s1,2017-10-06 11:07:15,12.00,3.50\n"
+    "o2,1,p2,s2,2018-07-30 03:24:27,18.00,1.99\n"
+    "o3,1,p3,s3,2018-08-13 08:55:23,7.00,0.00\n"
+)
+
+
+def make_archive(path: Path) -> Path:
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("olist_orders_dataset.csv", ORDERS)
+        archive.writestr("olist_order_payments_dataset.csv", PAYMENTS)
+        archive.writestr("olist_order_items_dataset.csv", ITEMS)
+    return path
+
+
+def test_extracts_sum_payments_and_items_per_order(tmp_path: Path) -> None:
+    erp, crm = build_extracts(make_archive(tmp_path / "olist.zip"), tmp_path / "out")
+    assert erp.read_bytes().decode("utf-8") == (
+        "order_id,amount,customer,order_date\n"
+        "o1,15.50,c1,2017-10-02\n"
+        "o2,20.00,c2,2018-07-24\n"
+        "o4,1.005,,\n"
+    )
+    assert crm.read_bytes().decode("utf-8") == (
+        "order_id,amount,customer,order_date\n"
+        "o1,15.50,c1,2017-10-02\n"
+        "o2,19.99,c2,2018-07-24\n"
+        "o3,7.00,c3,2018-08-08\n"
+    )
+
+
+def test_extracts_reconcile_into_every_group(tmp_path: Path) -> None:
+    erp, crm = build_extracts(make_archive(tmp_path / "olist.zip"), tmp_path / "out")
+    result = get_engine("stdlib")(erp, crm)
+    assert [p.erp.order_id for p in result.matched] == ["o1"]
+    assert [p.erp.order_id for p in result.amount_mismatch] == ["o2"]
+    assert [o.order_id for o in result.missing_in_erp] == ["o3"]
+    # Valor com 3 casas não é arredondado na extração: chega à quarentena como veio.
+    assert [(r.raw["order_id"], r.reason.value) for r in result.rejected] == [
+        ("o4", "invalid_amount")
+    ]
