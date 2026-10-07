@@ -81,6 +81,42 @@ pytest
   no resultado e as contas fecham.
 - CI no GitHub Actions com Ubuntu e Windows, `ruff` e `mypy --strict`.
 
+## Estudo de caso: dados públicos do Olist
+
+Os testes usam dados sintéticos porque precisam de gabarito: cada defeito é plantado e a
+resposta certa é conhecida. Para ver a ferramenta diante de dados reais, `tools/olist.py`
+monta um par ERP × CRM a partir do
+[Brazilian E-commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+(licença CC BY-NC-SA 4.0): "ERP" é a soma dos pagamentos de cada pedido e "CRM" é a soma de
+preço + frete dos itens. Os dados não ficam no repositório; o script baixa o arquivo.
+
+```bash
+python tools/olist.py
+python -m reconcile --erp data/olist/erp_orders.csv --crm data/olist/crm_orders.csv --out output/olist
+```
+
+Resultado com o arquivo de SHA-256 `967e41e04fc306fe604e2a693f488995a8b41e5047418f8a5c8e4abd6deca784`
+(os dois motores geram saídas idênticas byte a byte):
+
+| Grupo | Pedidos |
+|---|---|
+| matched | 98.089 |
+| amount_mismatch | 576 |
+| missing_in_erp | 1 |
+| missing_in_crm | 775 |
+| rejected | 0 |
+
+O que os números dizem, e o que não dizem:
+
+- **576 pedidos** (0,58% dos que existem nos dois lados) têm pagamento diferente de preço +
+  frete. A soma das diferenças é −2.870,39: no saldo, os pagamentos superam os itens.
+  76,7% desses pedidos foram parcelados no cartão, contra 51,5% de todos os pedidos, o que
+  sugere juros de parcelamento. É uma hipótese: os dados não trazem a taxa de juros.
+- **775 pedidos** têm pagamento e nenhum item; 603 estão com status `unavailable` e 164
+  com `canceled`. **1 pedido** tem item e nenhum pagamento.
+- **Nenhuma linha foi rejeitada.** O Olist vem limpo e os extratos são somas por pedido, então
+  este estudo não exercita a quarentena; quem faz isso são os dados sintéticos.
+
 ## Desempenho
 
 Gerado com `python tools/benchmark.py --orders 10000 100000 --repeat 3`:
