@@ -82,6 +82,9 @@ quarentena com um motivo explícito, e o analista decide. Cada linha rejeitada r
 A expressão regular vem antes do `Decimal` porque o `Decimal` aceita `1e3`, `NaN` e
 `Infinity`; e usa `[0-9]` em vez de `\d`, que em Python aceita dígitos de qualquer alfabeto.
 
+Pelo mesmo princípio, `-0` e `0` casam (são o mesmo valor), mas a saída mantém o sinal que
+veio: um `-0` no ERP aparece como `-0.00` em `matched.csv`. É fidelidade ao dado, não defeito.
+
 ## Os dois motores
 
 A fronteira entre eles é: **caminhos dos arquivos entram, um resultado canônico sai**
