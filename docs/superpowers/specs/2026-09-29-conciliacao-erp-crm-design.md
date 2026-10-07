@@ -58,6 +58,9 @@ flowchart LR
   divergem em alguns pedidos — hoje é hipótese, não fato; (2) conferir se a licença permite
   redistribuir os arquivos ou se o script deve apenas baixá-los. Se não houver divergências
   reais, o estudo de caso é descartado.
+  **Verificação feita em 2026-10-02:** as somas divergem em 576 pedidos (0,58%), há 775
+  pedidos só com pagamento e 1 só com itens; a licença é CC BY-NC-SA 4.0, então o script
+  baixa os dados em vez de redistribuí-los. O estudo segue: Tarefas 10 e 11 do plano.
 - **Por que os dados públicos não substituem os sintéticos:** teste precisa de gabarito.
   Nos sintéticos cada defeito é plantado e a resposta certa é conhecida; num conjunto
   público ninguém sabe qual é a conciliação correta, então ele prova que o programa
