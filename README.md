@@ -1,5 +1,9 @@
 # Conciliação de pedidos ERP × CRM
 
+[![CI](https://github.com/RPdatascience819/conciliacao-erp-crm/actions/workflows/ci.yml/badge.svg)](https://github.com/RPdatascience819/conciliacao-erp-crm/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-green)](LICENSE)
+
 O ERP (financeiro) e o CRM (comercial) deveriam concordar sobre os pedidos, mas divergem.
 Esta ferramenta de linha de comando compara os dois extratos CSV e separa os pedidos em
 grupos, **sem deixar nenhuma linha sumir em silêncio**: cada linha lida termina em
@@ -9,9 +13,30 @@ O mesmo problema é resolvido por **dois motores independentes**, um só com a b
 padrão (`csv` + `decimal`) e outro com pandas. Os dois passam pela mesma bateria de testes
 e geram saídas idênticas byte a byte, no Linux e no Windows.
 
+## O que este projeto demonstra
+
+- **Exatidão antes de conveniência.** Valores em `Decimal`, nunca `float`; nada é
+  arredondado, aparado ou corrigido antes de comparar. O que foge do formato vai para a
+  quarentena com o motivo.
+- **Prova, não promessa.** Cada linha lida termina em exatamente um arquivo, e o
+  `summary.md` fecha as contas. Testes de propriedade (`hypothesis`) verificam isso em
+  entradas geradas, além dos casos escritos à mão.
+- **Dois motores, um contrato.** A mesma especificação implementada com a biblioteca
+  padrão e com pandas, com saídas idênticas byte a byte. Os pontos em que o pandas
+  "ajuda" demais (inferência de tipos, `NaN`, linhas puladas) estão neutralizados.
+- **Falha segura.** As 6 saídas são trocadas de uma vez: um arquivo travado no Windows não
+  deixa a pasta com metade de uma execução e metade de outra.
+- **Dados reais com honestidade.** O estudo de caso com o Olist separa o que os números
+  mostram do que é hipótese.
+- **Design antes do código.** A [spec](docs/superpowers/specs/2026-09-29-conciliacao-erp-crm-design.md)
+  e o [plano de implementação](docs/superpowers/plans/2026-10-02-conciliacao-erp-crm.md)
+  registram as decisões e as alternativas descartadas.
+
 ## Uso
 
 ```bash
+git clone https://github.com/RPdatascience819/conciliacao-erp-crm.git
+cd conciliacao-erp-crm
 pip install .            # motor stdlib, sem dependências
 pip install .[pandas]    # acrescenta o motor pandas
 
@@ -134,3 +159,25 @@ O motor pandas não é mais rápido aqui, e isso é esperado: para não perder l
 o leitor `engine="python"` (o único que aceita uma função em `on_bad_lines`) e converte
 cada valor válido para `Decimal`, em vez de usar `float`. A comparação mostra o custo de
 exigir exatidão de uma ferramenta feita para velocidade.
+
+## Estrutura
+
+```text
+src/reconcile/
+  cli.py            linha de comando e códigos de saída
+  contract.py       regras de formato, motivos de rejeição, resultado canônico e leitura do texto
+  inputs.py         procedência das entradas: nome do arquivo e SHA-256
+  engines/          motor stdlib e motor pandas, atrás da mesma interface
+  writer.py         as 6 saídas, gravadas de uma vez
+tests/              exemplos, cenário de referência e propriedades
+tools/
+  generate.py       gerador de dados sintéticos com defeitos plantados
+  benchmark.py      comparação de desempenho entre os motores
+  olist.py          extração do estudo de caso com dados públicos
+docs/superpowers/   spec e plano de implementação
+```
+
+## Licença
+
+Código sob a licença [MIT](LICENSE). Os dados do Olist não fazem parte do repositório e
+seguem a licença deles (CC BY-NC-SA 4.0).
